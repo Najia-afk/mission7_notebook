@@ -1,0 +1,28 @@
+services:
+  jupyter:
+    build: .
+    container_name: mission7_notebook_jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+      - ./mlruns:/app/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5005
+    networks:
+      - mission7_net
+
+  mlflow:
+    build: .
+    container_name: mission7_notebook_mlflow
+    command: mlflow server --host 0.0.0.0 --port 5005 --backend-store-uri /app/mlruns --default-artifact-root /app/mlruns --allowed-hosts '*'
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./mlruns:/app/mlruns
+    networks:
+      - mission7_net
+
+networks:
+  mission7_net:
+    driver: bridge
