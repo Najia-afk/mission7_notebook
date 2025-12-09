@@ -1,10 +1,51 @@
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+
+class MissingIndicatorTransformer(BaseEstimator, TransformerMixin):
+    """
+    Custom transformer to create indicator columns for missing values.
+    1 = Original (Not Missing), 0 = Imputed (Missing)
+    """
+    def __init__(self, suffix='_origin'):
+        self.suffix = suffix
+        self.feature_names_in_ = None
+
+    def fit(self, X, y=None):
+        if hasattr(X, 'columns'):
+            self.feature_names_in_ = X.columns
+        return self
+
+    def transform(self, X):
+        # Handle pandas DataFrame
+        if hasattr(X, 'iloc'):
+            X_new = X.copy()
+            for col in X.columns:
+                # 1 if not NaN (original), 0 if NaN (imputed)
+                X_new[f"{col}{self.suffix}"] = X[col].notna().astype(int)
+            return X_new
+        
+        # Handle numpy array
+        else:
+            # Assuming X is 2D array
+            X_indicators = (~np.isnan(X)).astype(int)
+            return np.hstack([X, X_indicators])
+            
+    def get_feature_names_out(self, input_features=None):
+        if input_features is None:
+            input_features = self.feature_names_in_
+        
+        if input_features is None:
+             return None 
+             
+        output_features = list(input_features)
+        for f in input_features:
+            output_features.append(f"{f}{self.suffix}")
+        return np.array(output_features)
 
 class FeatureEngineering:
     """
@@ -13,12 +54,18 @@ class FeatureEngineering:
     def __init__(self):
         self.preprocessor = None
 
-    def create_preprocessor(self, numeric_features, categorical_features):
+    def create_preprocessor(self, numeric_features, categorical_features, use_knn=False):
         """
         Creates a sklearn ColumnTransformer for preprocessing.
         """
+        if use_knn:
+            imputer = KNNImputer(n_neighbors=5)
+        else:
+            imputer = SimpleImputer(strategy='median')
+
         numeric_transformer = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='median')),
+            ('indicator', MissingIndicatorTransformer()),
+            ('imputer', imputer),
             ('scaler', StandardScaler())
         ])
 

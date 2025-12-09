@@ -12,3 +12,4 @@ ipykernel
 pytest
 plotly>=5.0.0
 sqlalchemy>=1.4.0
+shap>=0.41.0

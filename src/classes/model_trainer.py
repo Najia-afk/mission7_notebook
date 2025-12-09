@@ -12,7 +12,7 @@ class ModelTrainer:
     def __init__(self, experiment_name: str = "HomeCredit_DefaultRisk"):
         mlflow.set_experiment(experiment_name)
 
-    def train_and_log(self, pipeline: ImbPipeline, param_grid: dict, X_train, y_train, scorer, run_name: str):
+    def train_and_log(self, pipeline: ImbPipeline, param_grid: dict, X_train, y_train, scorer, run_name: str, step_name: str = "model_training"):
         """
         Trains a model using GridSearchCV and logs results to MLflow.
         """
@@ -60,6 +60,6 @@ class ModelTrainer:
             mlflow.sklearn.log_model(grid_search.best_estimator_, "model")
             
             # Log step tag
-            mlflow.set_tag("step", "7_model_training")
+            mlflow.set_tag("step", step_name)
             
             return grid_search.best_estimator_
