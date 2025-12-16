@@ -4,6 +4,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.over_sampling import SMOTE
 from sklearn.base import BaseEstimator
+import warnings
 
 class ModelTrainer:
     """
@@ -30,11 +31,15 @@ class ModelTrainer:
                 scoring=scorer,
                 cv=cv,
                 n_jobs=-1,
-                verbose=2
+                verbose=0  # Reduce verbosity to avoid spam
             )
             
             print(f"Starting Grid Search for {run_name}...")
-            grid_search.fit(X_train, y_train)
+            
+            # Suppress specific warnings during fitting
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, message=".*X does not have valid feature names.*")
+                grid_search.fit(X_train, y_train)
             
             # Log best metrics and params
             best_score = grid_search.best_score_
@@ -57,7 +62,8 @@ class ModelTrainer:
                 # Log params as text to correlate with index if needed, or rely on params logged above
             
             # Log the best model
-            mlflow.sklearn.log_model(grid_search.best_estimator_, "model")
+            # Fix: Use artifact_path explicitly to avoid warning
+            mlflow.sklearn.log_model(grid_search.best_estimator_, artifact_path="model")
             
             # Log step tag
             mlflow.set_tag("step", step_name)

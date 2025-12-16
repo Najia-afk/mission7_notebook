@@ -36,7 +36,9 @@ class ModelVisualizer:
         results = {}
         print(f"Computing learning curves for {len(models_dict)} models...")
         
-        for i, (model_name, model) in enumerate(models_dict.items()):
+        from tqdm.notebook import tqdm
+        
+        for i, (model_name, model) in tqdm(enumerate(models_dict.items()), total=len(models_dict), desc="Computing Curves"):
             print(f"  Processing {model_name}...")
             try:
                 train_sizes_abs, train_scores, test_scores = learning_curve(
@@ -417,6 +419,74 @@ class ModelVisualizer:
             yaxis_title="Feature",
             height=600,
             template='plotly_white'
+        )
+        
+        return fig
+
+    @staticmethod
+    def plot_score_distribution(y_true, y_proba, threshold=0.5):
+        """
+        Plots the distribution of predicted probabilities for positive and negative classes,
+        highlighting the decision threshold and risk zones.
+        
+        Parameters:
+        -----------
+        y_true : array-like
+            True labels (0 or 1)
+        y_proba : array-like
+            Predicted probabilities for the positive class (1)
+        threshold : float
+            Decision threshold (default: 0.5)
+        """
+        df_scores = pd.DataFrame({'True Label': y_true, 'Probability': y_proba})
+        
+        fig = go.Figure()
+        
+        # Distribution for Negative Class (Repayment - Target=0)
+        fig.add_trace(go.Histogram(
+            x=df_scores[df_scores['True Label'] == 0]['Probability'],
+            name='Repayment (Target=0)',
+            marker_color='green',
+            opacity=0.6,
+            nbinsx=50
+        ))
+        
+        # Distribution for Positive Class (Default - Target=1)
+        fig.add_trace(go.Histogram(
+            x=df_scores[df_scores['True Label'] == 1]['Probability'],
+            name='Default (Target=1)',
+            marker_color='red',
+            opacity=0.6,
+            nbinsx=50
+        ))
+        
+        # Add Threshold Line
+        fig.add_vline(x=threshold, line_width=3, line_dash="dash", line_color="black", annotation_text=f"Threshold: {threshold:.2f}")
+        
+        # Add Background Zones
+        # Green Zone (Below Threshold) -> Predicted 0 (Approve)
+        fig.add_vrect(
+            x0=0, x1=threshold,
+            fillcolor="green", opacity=0.1,
+            layer="below", line_width=0,
+            annotation_text="Approve (Safe)", annotation_position="top left"
+        )
+        
+        # Red Zone (Above Threshold) -> Predicted 1 (Reject)
+        fig.add_vrect(
+            x0=threshold, x1=1,
+            fillcolor="red", opacity=0.1,
+            layer="below", line_width=0,
+            annotation_text="Reject (Risky)", annotation_position="top right"
+        )
+        
+        fig.update_layout(
+            title=f"Credit Score Distribution & Decision Boundary (Threshold={threshold:.2f})",
+            xaxis_title="Predicted Probability of Default",
+            yaxis_title="Count",
+            barmode='overlay',
+            template='plotly_white',
+            legend=dict(x=0.01, y=0.99, bgcolor='rgba(255, 255, 255, 0.8)')
         )
         
         return fig
