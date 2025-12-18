@@ -241,6 +241,10 @@ class ModelVisualizer:
         else:
             X_sample = X
             
+        # Extract best_estimator_ if it's a search object (GridSearchCV, HalvingGridSearchCV)
+        if hasattr(model, 'best_estimator_'):
+            model = model.best_estimator_
+            
         # Extract model and preprocessor if pipeline
         if hasattr(model, 'named_steps'):
             # Assuming standard pipeline structure
