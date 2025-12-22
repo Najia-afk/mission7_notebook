@@ -34,15 +34,13 @@ class ModelVisualizer:
         
         # Pre-compute curves for all models
         results = {}
-        print(f"Computing learning curves for {len(models_dict)} models...")
         
         from tqdm.notebook import tqdm
         
         for i, (model_name, model) in tqdm(enumerate(models_dict.items()), total=len(models_dict), desc="Computing Curves"):
-            print(f"  Processing {model_name}...")
             try:
                 train_sizes_abs, train_scores, test_scores = learning_curve(
-                    model, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes, scoring=scorer
+                    model, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes, scoring=scorer, verbose=0
                 )
                 
                 train_mean = np.mean(train_scores, axis=1)
@@ -193,20 +191,23 @@ class ModelVisualizer:
         
         subplot_titles = ['AUC', 'Accuracy', 'F1 Score', 'Precision', 'Recall']
         if business_scorer:
-            subplot_titles.append('Business Cost (Lower is Better)')
+            subplot_titles.append('Avg Business Cost (Lower is Better)')
             
         fig = make_subplots(rows=rows, cols=cols, subplot_titles=subplot_titles)
         
         # Helper to add trace
         def add_metric_bar(metric_name, row, col, color):
             if metric_name in df_metrics.columns:
+                # Highlight Baseline in red
+                colors = ['#d62728' if model == 'Baseline' else color for model in df_metrics['Model']]
+                
                 fig.add_trace(
                     go.Bar(
                         x=df_metrics['Model'],
                         y=df_metrics[metric_name],
                         name=metric_name,
-                        marker_color=color,
-                        text=df_metrics[metric_name].apply(lambda x: f"{x:.3f}" if metric_name != 'Business Cost' else f"{x:,.0f}"),
+                        marker_color=colors,
+                        text=df_metrics[metric_name].apply(lambda x: f"{x:.3f}" if metric_name != 'Business Cost' else f"{x:.4f}"),
                         textposition='auto'
                     ),
                     row=row, col=col

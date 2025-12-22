@@ -12,11 +12,23 @@ class BusinessScorer:
 
     def cost_function(self, y_true, y_pred):
         """
-        Calculates the total cost based on the confusion matrix.
+        Calculates the average cost per client based on the confusion matrix.
         """
-        tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+        cm = confusion_matrix(y_true, y_pred)
+        if cm.shape == (2, 2):
+            tn, fp, fn, tp = cm.ravel()
+        else:
+            # Handle cases where only one class is predicted
+            tn = fp = fn = tp = 0
+            if len(np.unique(y_true)) == 1:
+                if y_true[0] == 0: fp = np.sum(y_pred == 1)
+                else: fn = np.sum(y_pred == 0)
+            else:
+                if np.unique(y_pred)[0] == 0: fn = np.sum(y_true == 1)
+                else: fp = np.sum(y_true == 0)
+
         cost = (fn * self.fn_cost) + (fp * self.fp_cost)
-        return cost
+        return cost / len(y_true) if len(y_true) > 0 else 0.0
 
     def get_scorer(self):
         """

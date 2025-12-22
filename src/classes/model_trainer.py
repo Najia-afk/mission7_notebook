@@ -34,7 +34,7 @@ class ModelTrainer:
                 resource='n_samples',
                 min_resources=500,  # Ensure enough samples for SMOTE
                 random_state=42,
-                n_jobs=2, # Safe parallel search
+                n_jobs=16, # Optimized for i9-14900K (32 logical processors)
                 verbose=0
             )
             
