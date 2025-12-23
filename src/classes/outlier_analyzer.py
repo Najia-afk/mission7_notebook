@@ -122,9 +122,10 @@ class OutlierAnalyzer:
             
         return all_summaries, all_outlier_info, all_stats_info
 
-    def get_cleaned_dataframe(self, method_name: str, columns: list = None) -> pd.DataFrame:
+    def get_bounds(self, method_name: str, columns: list = None) -> dict:
         """
-        Returns a cleaned dataframe for a specific method.
+        Returns the lower and upper bounds for specified columns using a specific method.
+        Useful for applying training bounds to validation/test sets.
         """
         if method_name not in self.methods:
             raise ValueError(f"Method {method_name} not found.")
@@ -132,13 +133,43 @@ class OutlierAnalyzer:
         if columns is None:
             columns = self.df.select_dtypes(include=['float64', 'int64']).columns.tolist()
             
-        df_clean = self.df.copy()
+        bounds = {}
         method_info = self.methods[method_name]
         
         for col in columns:
             if col not in self.df.columns:
                 continue
             lower_bound, upper_bound = method_info["function"](self.df[col])
+            bounds[col] = (lower_bound, upper_bound)
+            
+        return bounds
+
+    def get_cleaned_dataframe(self, method_name: str, columns: list = None, bounds: dict = None) -> pd.DataFrame:
+        """
+        Returns a cleaned dataframe for a specific method.
+        If bounds are provided, uses them instead of calculating from the current dataframe.
+        """
+        if method_name not in self.methods and bounds is None:
+            raise ValueError(f"Method {method_name} not found and no bounds provided.")
+            
+        if columns is None:
+            if bounds:
+                columns = list(bounds.keys())
+            else:
+                columns = self.df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+            
+        df_clean = self.df.copy()
+        
+        for col in columns:
+            if col not in self.df.columns:
+                continue
+                
+            if bounds and col in bounds:
+                lower_bound, upper_bound = bounds[col]
+            else:
+                method_info = self.methods[method_name]
+                lower_bound, upper_bound = method_info["function"](self.df[col])
+                
             outliers = ((self.df[col] < lower_bound) | (self.df[col] > upper_bound))
             df_clean.loc[outliers, col] = np.nan
             

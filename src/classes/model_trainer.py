@@ -9,17 +9,27 @@ class ModelTrainer:
     """
     Class to handle model training, tuning, and MLflow logging.
     """
-    def __init__(self, experiment_name: str = "HomeCredit_DefaultRisk"):
-        mlflow.set_experiment(experiment_name)
+    def __init__(self, experiment_name: str = None):
+        if experiment_name:
+            mlflow.set_experiment(experiment_name)
 
-    def train_and_log(self, pipeline: ImbPipeline, param_grid: dict, X_train, y_train, scorer, run_name: str, step_name: str = "model_training"):
+    def train_and_log(self, pipeline: ImbPipeline, param_grid: dict, X_train, y_train, scorer, run_name: str, step_name: str = "model_training", factor: int = 5, n_jobs: int = -1):
         """
         Trains a model using HalvingGridSearchCV (Successive Halving) for professional pruning.
         Logs all candidate trials to MLflow.
+        
+        Parameters:
+        -----------
+        factor : int, default=5
+            Factor for successive halving (5=aggressive, 4=moderate, 3=conservative)
+        n_jobs : int, default=-1
+            Number of parallel jobs to run. -1 means using all processors.
         """
         with mlflow.start_run(run_name=run_name) as parent_run:
             mlflow.set_tag("param_grid", str(param_grid))
             mlflow.set_tag("search_type", "HalvingGridSearchCV")
+            mlflow.set_tag("pruning_factor", factor)
+            mlflow.set_tag("n_jobs", n_jobs)
             
             # Cross-validation strategy
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
@@ -30,15 +40,15 @@ class ModelTrainer:
                 param_grid=param_grid,
                 scoring=scorer,
                 cv=cv,
-                factor=3,
+                factor=factor,
                 resource='n_samples',
                 min_resources=500,  # Ensure enough samples for SMOTE
                 random_state=42,
-                n_jobs=16, # Optimized for i9-14900K (32 logical processors)
+                n_jobs=n_jobs,
                 verbose=0
             )
             
-            print(f"Starting Professional Halving Search for {run_name} (Pruning enabled)...")
+            print(f"Starting Halving Search for {run_name}...")
             
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore")

@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.model_selection import learning_curve
-from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import shap
 import warnings
 
@@ -492,6 +492,79 @@ class ModelVisualizer:
             barmode='overlay',
             template='plotly_white',
             legend=dict(x=0.01, y=0.99, bgcolor='rgba(255, 255, 255, 0.8)')
+        )
+        
+        return fig
+
+    @staticmethod
+    def plot_confusion_matrix(y_true, y_pred, labels=['Repayment', 'Default']):
+        """
+        Plots a Plotly confusion matrix.
+        """
+        cm = confusion_matrix(y_true, y_pred)
+        
+        # Normalize for percentages
+        cm_norm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        
+        z = cm
+        x = labels
+        y = labels
+        
+        # Text for cells
+        text = [[f"Count: {cm[i][j]}<br>Rate: {cm_norm[i][j]:.2%}" for j in range(len(x))] for i in range(len(y))]
+        
+        fig = go.Figure(data=go.Heatmap(
+            z=z, x=x, y=y,
+            text=text,
+            texttemplate="%{text}",
+            colorscale='Blues',
+            showscale=False
+        ))
+        
+        fig.update_layout(
+            title="Confusion Matrix",
+            xaxis_title="Predicted Label",
+            yaxis_title="True Label",
+            template='plotly_white',
+            width=500,
+            height=500
+        )
+        
+        return fig
+
+    @staticmethod
+    def plot_cost_curve(thresholds, costs, optimal_threshold):
+        """
+        Plots the business cost vs. threshold curve.
+        """
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=thresholds,
+            y=costs,
+            mode='lines',
+            name='Business Cost',
+            line=dict(color='blue', width=3)
+        ))
+        
+        # Highlight Optimal Point
+        min_cost = min(costs)
+        fig.add_trace(go.Scatter(
+            x=[optimal_threshold],
+            y=[min_cost],
+            mode='markers',
+            name='Optimal Threshold',
+            marker=dict(color='red', size=12, symbol='star')
+        ))
+        
+        fig.add_vline(x=optimal_threshold, line_dash="dash", line_color="red")
+        
+        fig.update_layout(
+            title=f"Business Cost Optimization Curve (Optimal Threshold: {optimal_threshold:.2f})",
+            xaxis_title="Probability Threshold",
+            yaxis_title="Average Cost per Client",
+            template='plotly_white',
+            hovermode="x unified"
         )
         
         return fig

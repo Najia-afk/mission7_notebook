@@ -41,6 +41,16 @@ class BusinessScorer:
         """
         Finds the optimal probability threshold that minimizes the cost.
         """
+        thresholds, costs = self.get_cost_curve_data(y_true, y_proba)
+        best_threshold = thresholds[np.argmin(costs)]
+        min_cost = min(costs)
+        
+        return best_threshold, min_cost
+
+    def get_cost_curve_data(self, y_true, y_proba):
+        """
+        Returns thresholds and their corresponding costs for plotting.
+        """
         thresholds = np.linspace(0, 1, 101)
         costs = []
         
@@ -48,7 +58,4 @@ class BusinessScorer:
             y_pred = (y_proba >= thresh).astype(int)
             costs.append(self.cost_function(y_true, y_pred))
             
-        best_threshold = thresholds[np.argmin(costs)]
-        min_cost = min(costs)
-        
-        return best_threshold, min_cost
+        return thresholds, costs

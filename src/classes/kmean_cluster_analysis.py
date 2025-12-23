@@ -80,6 +80,49 @@ class KMeansClusterAnalysis:
         """Return a consistent color for a cluster index"""
         color_list = self.cluster_colors_transparent if transparent else self.cluster_colors
         return color_list[cluster_idx % len(color_list)]
+    
+    def get_cluster_profiles(self, n_clusters: int = None, labels: np.ndarray = None) -> pd.DataFrame:
+        """
+        Generate cluster profiles showing mean values of key features.
+        
+        Parameters:
+        -----------
+        n_clusters : int, optional
+            Number of clusters (if labels not provided)
+        labels : np.ndarray, optional
+            Cluster labels for each sample
+            
+        Returns:
+        --------
+        profile_df : pd.DataFrame
+            DataFrame with cluster statistics (Size, Pct, Top 10 features)
+        """
+        if labels is None and n_clusters is None:
+            raise ValueError("Either 'labels' or 'n_clusters' must be provided")
+        
+        if labels is None:
+            kmeans = MiniBatchKMeans(n_clusters=n_clusters, batch_size=1024, random_state=42)
+            labels = kmeans.fit_predict(self.df[self.features].values)
+        
+        df_with_labels = self.df.copy()
+        df_with_labels['Cluster'] = labels
+        
+        numeric_cols = df_with_labels.select_dtypes(include=['number']).columns.tolist()
+        if 'Cluster' in numeric_cols:
+            numeric_cols.remove('Cluster')
+        
+        if len(numeric_cols) > 10:
+            variances = df_with_labels[numeric_cols].var()
+            top_features = variances.nlargest(10).index.tolist()
+        else:
+            top_features = numeric_cols
+        
+        profiles = df_with_labels.groupby('Cluster')[top_features].mean()
+        profiles['Size'] = df_with_labels.groupby('Cluster').size()
+        profiles['Pct'] = (profiles['Size'] / len(df_with_labels) * 100).round(1)
+        profiles = profiles[['Size', 'Pct'] + top_features]
+        
+        return profiles.round(3)
         
     def elbow_method(self, k_range: range) -> Dict:
         """Optimized elbow method using MiniBatchKMeans."""

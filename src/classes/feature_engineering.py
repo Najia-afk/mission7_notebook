@@ -24,17 +24,17 @@ class MissingIndicatorTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         # Handle pandas DataFrame
         if hasattr(X, 'iloc'):
+            indicators = {}
+            for col in X.columns:
+                # 1 if not NaN (original), 0 if NaN (imputed)
+                indicators[f"{col}{self.suffix}"] = X[col].notna().astype(int)
+            
+            X_indicators = pd.DataFrame(indicators, index=X.index)
+            
             if self.return_only_indicators:
-                X_indicators = pd.DataFrame(index=X.index)
-                for col in X.columns:
-                    X_indicators[f"{col}{self.suffix}"] = X[col].notna().astype(int)
                 return X_indicators
             else:
-                X_new = X.copy()
-                for col in X.columns:
-                    # 1 if not NaN (original), 0 if NaN (imputed)
-                    X_new[f"{col}{self.suffix}"] = X[col].notna().astype(int)
-                return X_new
+                return pd.concat([X, X_indicators], axis=1)
         
         # Handle numpy array
         else:
@@ -81,8 +81,8 @@ class FeatureEngineering:
             imputer = SimpleImputer(strategy='median')
 
         numeric_transformer = Pipeline(steps=[
-            ('imputer', imputer),
-            ('scaler', StandardScaler())
+            ('scaler', StandardScaler()),  # Scale BEFORE imputation for better KNN distance calculations
+            ('imputer', imputer)
         ])
         
         indicator_transformer = MissingIndicatorTransformer(return_only_indicators=True)
