@@ -403,6 +403,32 @@ class ModelVisualizer:
         
         final_value = base_value + np.sum(shap_values)
         
+        # Create labels that are more readable
+        y_labels = []
+        for val, feat in zip(sorted_values, sorted_features):
+            clean_feat = feat
+            # Remove prefixes from ColumnTransformer
+            if clean_feat.startswith('cat__'):
+                clean_feat = clean_feat.replace('cat__', '')
+                # If it's a categorical flag (value 1), make it explicit
+                if abs(val - 1.0) < 1e-3:
+                    # Try to find the last underscore which usually separates feature name from category
+                    parts = clean_feat.rsplit('_', 1)
+                    if len(parts) > 1:
+                        clean_feat = f"{parts[0]}: {parts[1]}"
+                    y_labels.append(f"<b>YES</b> | {clean_feat}")
+                else:
+                    y_labels.append(f"<b>NO</b> | {clean_feat}")
+            elif clean_feat.startswith('num__'):
+                clean_feat = clean_feat.replace('num__', '')
+                y_labels.append(f"<b>{val:.2f}</b> | {clean_feat}")
+            elif clean_feat.startswith('ind__'):
+                clean_feat = clean_feat.replace('ind__', '').replace('_origin', '')
+                status = "PRESENT" if abs(val - 1.0) < 1e-3 else "MISSING"
+                y_labels.append(f"<b>{status}</b> | {clean_feat}")
+            else:
+                y_labels.append(f"<b>{val:.2f}</b> | {clean_feat}")
+        
         fig = go.Figure()
         
         # Ensure scalar comparisons
@@ -410,7 +436,7 @@ class ModelVisualizer:
         
         fig.add_trace(go.Bar(
             x=sorted_shap.tolist(),
-            y=sorted_features,
+            y=y_labels,
             orientation='h',
             marker_color=colors,
             text=[f"{float(val):.2f}" for val in sorted_values],

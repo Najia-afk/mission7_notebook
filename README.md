@@ -25,7 +25,8 @@ The project is built on a modular and containerized architecture:
 1.  **Preprocessing Pipeline**: Class imbalance management and optimized imputation (SimpleImputer + Missing Indicators).
 2.  **Advanced Modeling**: Utilization of **LightGBM** with hyperparameter optimization via HalvingGridSearchCV.
 3.  **Zero-Leakage Architecture**: Strict data separation (Train/Val/Test) before any processing to ensure result integrity.
-4.  **Observability**: Statistical monitoring of feature distributions to detect production drift.
+4.  **Champion vs Challenger**: Automated comparison against the current production model to ensure business cost reduction before registration.
+5.  **Observability**: Statistical monitoring of feature distributions to detect production drift.
 
 ---
 

@@ -3,10 +3,11 @@ Script: Model Registration (Step 10)
 Registers the best model in MLflow with business metadata.
 """
 import mlflow
+from mlflow.tracking import MlflowClient
 
-def register_best_model(experiment_name, run_name, model_name, optimal_threshold=None, min_cost=None):
+def register_best_model(experiment_name, run_name, model_name, optimal_threshold=None, min_cost=None, transition_to_prod=False):
     """
-    Finds a run by name, logs business metadata, and registers the model.
+    Finds a run by name, logs business metadata, registers the model, and optionally promotes it.
     
     Args:
         experiment_name: Name of the MLflow experiment
@@ -14,11 +15,13 @@ def register_best_model(experiment_name, run_name, model_name, optimal_threshold
         model_name: Name to give the registered model
         optimal_threshold: (Optional) The business-optimized threshold
         min_cost: (Optional) The minimum business cost achieved
+        transition_to_prod: (Optional) If True, transitions the model to 'Production' stage
         
     Returns:
         registered_model object or None
     """
     print(f"Registering model from run '{run_name}' to registry as '{model_name}'...")
+    client = MlflowClient()
     
     try:
         # 1. Find the correct Training Run ID
@@ -59,6 +62,18 @@ def register_best_model(experiment_name, run_name, model_name, optimal_threshold
         registered_model = mlflow.register_model(model_uri, model_name)
         
         print(f"Model registered as '{model_name}' v{registered_model.version}")
+
+        # 4. Transition to Production if requested
+        if transition_to_prod:
+            print(f"Promoting v{registered_model.version} to 'Production' stage...")
+            client.transition_model_version_stage(
+                name=model_name,
+                version=registered_model.version,
+                stage="Production",
+                archive_existing_versions=True
+            )
+            print(f"Model v{registered_model.version} is now in Production. Old versions archived.")
+
         if optimal_threshold is not None:
             print(f"Deployment Note: Use probability threshold {optimal_threshold:.2f} for production inference.")
             
