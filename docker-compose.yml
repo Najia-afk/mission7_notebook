@@ -3,7 +3,7 @@ services:
     build: .
     container_name: mission7_notebook_jupyter
     ports:
-      - "8888:8888"
+      - "8887:8888"
     volumes:
       - .:/app
       - ./mlruns:/app/mlruns
